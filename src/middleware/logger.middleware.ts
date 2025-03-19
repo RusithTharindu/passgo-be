@@ -12,7 +12,7 @@ export class LoggerMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const responseTime = Date.now() - startTime;
       this.logger.log(
-        `${method} ${originalUrl} ${res.statusCode} - ${responseTime}ms`
+        `${method} ${originalUrl} ${res.statusCode} - ${responseTime}ms`,
       );
     });
 
