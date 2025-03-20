@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.vscode
+*.log
+.git
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+README.md
