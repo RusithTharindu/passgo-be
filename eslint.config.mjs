@@ -6,7 +6,15 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: [
+      'eslint.config.mjs',
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      '.vscode/**',
+      '*.log',
+      '.git/**'
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -26,10 +34,14 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/*.ts', '**/*.tsx'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn'
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/interface-name-prefix': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   },
 );
