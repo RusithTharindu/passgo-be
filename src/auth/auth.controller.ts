@@ -12,8 +12,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // POST Signup (/auth/signup)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(Role.ADMIN)
   @Post('signup')
   async signup(@Body() signupData: SignUpDto) {
     return this.authService.signup(signupData);
@@ -27,7 +27,7 @@ export class AuthController {
 
   //This is a test route
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.ADMIN)
+  @Roles(Role.APPLICANT)
   @Post('test')
   test() {
     return 'This is a test route';

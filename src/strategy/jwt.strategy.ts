@@ -1,31 +1,31 @@
-// import { Injectable, UnauthorizedException } from '@nestjs/common';
-// import { PassportStrategy } from '@nestjs/passport';
-// import { ExtractJwt, Strategy } from 'passport-jwt';
-// import { ConfigService } from '@nestjs/config';
-// import { InjectModel } from '@nestjs/mongoose';
-// import { Model } from 'mongoose';
-// import { User } from './entities/user.entity';
+/* eslint-disable */
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy, StrategyOptions } from 'passport-jwt';
+import { AuthService } from 'src/auth/auth.service';
+import { AuthJwtPayload } from 'src/auth/types/auth-jwtPayload';
 
-// @Injectable()
-// export class JwtStrategy extends PassportStrategy(Strategy) {
-//   constructor(
-//     private configService: ConfigService,
-//     @InjectModel('User') private readonly userModel: Model<User>,
-//   ) {
-//     super({
-//       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-//       secretOrKey: configService.get<string>('JWT_SECRET'),
-//     });
-//   }
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(
+    private configService: ConfigService,
+    private authService: AuthService,
+  ) {
+    const options: StrategyOptions = {
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: configService.get<string>('JWT_SECRET'),
+    };
+    super(options);
+  }
 
-//   async validate(payload: any) {
-//     const { id } = payload;
-//     const user = await this.userModel.findById(id);
-
-//     if (!user) {
-//       throw new UnauthorizedException('Login first to access this endpoint.');
-//     }
-
-//     return user;
-//   }
-// }
+  async validate(payload: AuthJwtPayload) {
+    // Validate the user by the JWT payload
+    const user = await this.authService.findById(payload.uid);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
+  }
+}
