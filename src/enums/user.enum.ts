@@ -1,10 +1,10 @@
 export enum Role {
-    USER = 'user',
-    ADMIN = 'admin',
-    MANAGER = 'manager',
+  APPLICANT = 'applicant',
+  ADMIN = 'admin',
+  MANAGER = 'manager',
 }
 
 export enum UserStatus {
-    ACTIVE = 'active',
-    INACTIVE = 'inactive'
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
 }
