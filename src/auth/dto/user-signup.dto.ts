@@ -1,8 +1,11 @@
-import { IsEmail, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsString, Matches, MinLength, IsDateString, IsIn } from 'class-validator';
 
 export class SignUpDto {
   @IsString()
-  name: string;
+  firstName: string;
+
+  @IsString()
+  lastName: string;
 
   @IsEmail(
     {},
@@ -12,14 +15,18 @@ export class SignUpDto {
   )
   email: string;
 
-  // TODO: Add validation for password using regex
   @IsString({ message: 'Invalid password' })
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   @Matches(/^(?=.*[0-9])/, { message: 'Password must contain at least one number' })
   password: string;
 
   @IsString()
-  role: string;
+  @IsIn(['male', 'female'], { message: 'Gender must be either Male or Female' })
+  gender: string;
 
-  // TODO: Add rest of the required fields for signup
+  @IsDateString({}, { message: 'Birthdate must be a valid date string' })
+  birthdate: string;
+
+  @IsString()
+  role: string;
 }
