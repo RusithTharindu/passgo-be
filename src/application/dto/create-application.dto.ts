@@ -131,4 +131,7 @@ export class CreateApplicationDto {
   @IsString()
   @IsOptional()
   paymentReference?: string;
+
+  @IsString()
+  studioPhotoUrl: string;
 }

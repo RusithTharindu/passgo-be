@@ -179,6 +179,9 @@ export class Application extends Document {
   @Prop({ type: Boolean, default: false })
   fingerprintVerified?: boolean;
 
+  @Prop({ required: true })
+  studioPhotoUrl: string;
+
   @Prop()
   counterNumber: string;
 }
