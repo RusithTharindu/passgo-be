@@ -3,6 +3,31 @@ import { Document } from 'mongoose';
 import { User } from 'src/auth/entities/user.entity';
 import * as mongoose from 'mongoose';
 
+export enum ApplicationStatus {
+  SUBMITTED = 'submitted', // Application submitted
+  PAYMENT_PENDING = 'payment_pending', // Payment not completed
+  PAYMENT_VERIFIED = 'payment_verified', // Payment verified
+  COUNTER_VERIFICATION = 'counter_verification', // Initial counter verification
+  BIOMETRICS_PENDING = 'biometrics_pending', // Waiting for photo/fingerprint capture
+  BIOMETRICS_COMPLETED = 'biometrics_completed', // Photo/fingerprint captured
+  CONTROLLER_REVIEW = 'controller_review', // Under controller's review
+  SENIOR_OFFICER_REVIEW = 'senior_officer_review', // Under senior officer review
+  DATA_ENTRY = 'data_entry', // Data entry stage
+  PRINTING_PENDING = 'printing_pending', // Ready for printing
+  PRINTING = 'printing', // Currently printing
+  QUALITY_ASSURANCE = 'quality_assurance', // QA check
+  READY_FOR_COLLECTION = 'ready_for_collection', // Ready to be collected
+  COLLECTED = 'collected', // Passport collected
+  REJECTED = 'rejected', // Application rejected
+  ON_HOLD = 'on_hold', // Application on hold for additional verification
+}
+
+export interface StatusHistory {
+  status: ApplicationStatus;
+  timestamp: Date;
+  comment?: string;
+}
+
 @Schema({
   timestamps: true,
   versionKey: false,
@@ -86,8 +111,76 @@ export class Application extends Document {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
   submittedBy: User;
 
-  @Prop({ default: 'pending', enum: ['pending', 'approved', 'rejected'] })
-  status: string;
+  @Prop({
+    type: String,
+    enum: Object.values(ApplicationStatus),
+    default: ApplicationStatus.SUBMITTED,
+  })
+  status: ApplicationStatus;
+
+  @Prop([
+    {
+      status: { type: String, enum: Object.values(ApplicationStatus) },
+      timestamp: { type: Date },
+      comment: { type: String },
+    },
+  ])
+  statusHistory: StatusHistory[];
+
+  @Prop()
+  expectedCompletionDate?: Date;
+
+  @Prop()
+  appointmentDate?: Date;
+
+  @Prop()
+  appointmentTime?: string;
+
+  @Prop()
+  rejectionReason?: string;
+
+  @Prop({ type: Number })
+  paymentAmount?: number;
+
+  @Prop()
+  paymentReference?: string;
+
+  @Prop()
+  passportNumber?: string;
+
+  @Prop({ enum: ['Colombo', 'Kandy', 'Matara', 'Vavuniya', 'Regional Office'] })
+  collectionLocation: string;
+
+  @Prop([
+    {
+      documentType: {
+        type: String,
+        enum: ['birth_certificate', 'nic'],
+      },
+      verified: { type: Boolean, default: false },
+      verificationDate: { type: Date },
+    },
+  ])
+  documentVerification: {
+    documentType: string;
+    verified: boolean;
+    verificationDate?: Date;
+  }[];
+
+  @Prop()
+  biometricAppointmentDate?: Date;
+
+  @Prop()
+  biometricAppointmentTime?: string;
+
+  @Prop({ type: Boolean, default: false })
+  photoVerified: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  fingerprintVerified?: boolean;
+
+  @Prop()
+  counterNumber: string;
 }
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);

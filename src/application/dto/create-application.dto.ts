@@ -1,4 +1,17 @@
-import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+
+export enum CollectionLocation {
+  COLOMBO = 'Colombo',
+  KANDY = 'Kandy',
+  MATARA = 'Matara',
+  VAVUNIYA = 'Vavuniya',
+  REGIONAL_OFFICE = 'Regional Office',
+}
+
+export enum DocumentType {
+  BIRTH_CERTIFICATE = 'birth_certificate',
+  NIC = 'nic',
+}
 
 export class CreateApplicationDto {
   @IsEnum(['normal', 'oneDay'])
@@ -80,4 +93,42 @@ export class CreateApplicationDto {
   @IsString()
   @IsOptional()
   childMotherPassportNumber?: string;
+
+  @IsEnum(CollectionLocation)
+  collectionLocation: CollectionLocation;
+
+  @IsOptional()
+  documentVerification?: {
+    documentType: DocumentType;
+    verified: boolean;
+    verificationDate?: Date;
+  }[];
+
+  @IsString()
+  @IsOptional()
+  biometricAppointmentDate?: string;
+
+  @IsString()
+  @IsOptional()
+  biometricAppointmentTime?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  photoVerified?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  fingerprintVerified?: boolean;
+
+  @IsString()
+  @IsOptional()
+  counterNumber?: string;
+
+  @IsNumber()
+  @IsOptional()
+  paymentAmount?: number;
+
+  @IsString()
+  @IsOptional()
+  paymentReference?: string;
 }
