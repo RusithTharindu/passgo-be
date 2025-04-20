@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import config from './config/config';
 import { PassportModule } from '@nestjs/passport';
+import { ApplicationModule } from './application/application.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PassportModule } from '@nestjs/passport';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     AuthModule,
     UserModule,
+    ApplicationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

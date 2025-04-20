@@ -1,0 +1,27 @@
+export type ApplicationType = {
+  typeOfService: 'normal' | 'oneDay';
+  TypeofTravelDocument: 'all' | 'middleEast' | 'emergencyCertificate' | 'identityCertificate';
+  presentTravelDocument?: string | number;
+  nmrpNumber?: string | number;
+  nationalIdentityCardNumber: string | number;
+  surname: string;
+  otherNames: string;
+  permanentAddress: string;
+  permenantAddressDistrict: string;
+  birthdate: string;
+  birthCertificateNumber: string | number;
+  birthCertificateDistrict: string;
+  placeOfBirth: string;
+  sex: 'male' | 'female';
+  profession: string;
+  isDualCitizen: boolean;
+  dualCitizeshipNumber?: string | number;
+  mobileNumber: string | number;
+  emailAddress: string;
+  foreignNationality?: string;
+  foreignPassportNumber?: string | number;
+  isChild?: boolean;
+  childFatherPassportNumber?: string | number;
+  childMotherPassportNumber?: string | number;
+  submittedBy?: string;
+};
