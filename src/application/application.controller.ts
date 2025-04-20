@@ -10,7 +10,10 @@ import {
   Request,
   Logger,
   UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApplicationService } from './application.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
@@ -19,13 +22,17 @@ import { RolesGuard } from '../auth/guards/roles/roles.guard';
 import { Role } from '../enums/user.enum';
 import { Roles } from '../auth/decorators/roles.decorators';
 import { ApplicationStatus } from './entities/application.entity';
+import { S3Service, DocumentType } from '../s3/s3.service';
 
 @Controller('application')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ApplicationController {
   private readonly logger = new Logger(ApplicationController.name);
 
-  constructor(private readonly applicationService: ApplicationService) {}
+  constructor(
+    private readonly applicationService: ApplicationService,
+    private readonly s3Service: S3Service,
+  ) {}
 
   @Get('test-auth')
   @UseGuards(JwtAuthGuard)
@@ -92,5 +99,97 @@ export class ApplicationController {
   @Roles(Role.ADMIN)
   async remove(@Param('id') id: string) {
     return this.applicationService.remove(id);
+  }
+
+  @Post('upload-document/:type')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Param('type') type: string,
+    @Request() req,
+  ) {
+    const userId = req.user._id || req.user.id;
+    let documentType: DocumentType;
+
+    switch (type) {
+      case 'nic-front':
+        documentType = DocumentType.NIC_FRONT;
+        break;
+      case 'nic-back':
+        documentType = DocumentType.NIC_BACK;
+        break;
+      case 'birth-cert-front':
+        documentType = DocumentType.BIRTH_CERT_FRONT;
+        break;
+      case 'birth-cert-back':
+        documentType = DocumentType.BIRTH_CERT_BACK;
+        break;
+      case 'user-photo':
+        documentType = DocumentType.USER_PHOTO;
+        break;
+      default:
+        throw new Error('Invalid document type');
+    }
+
+    try {
+      const fileKey = this.s3Service.generateFileKey(userId, documentType);
+      const uploadedKey = await this.s3Service.uploadFile(file, fileKey);
+      const downloadUrl = await this.s3Service.generatePresignedUrl(
+        uploadedKey,
+        'getObject',
+        3600 * 24 * 7,
+      ); // 7 days
+
+      // Update application with the new URL
+      const applicationId = req.query.applicationId;
+      if (!applicationId) {
+        throw new Error('Application ID is required');
+      }
+
+      const updateData: Partial<UpdateApplicationDto> = {};
+
+      switch (documentType) {
+        case DocumentType.NIC_FRONT:
+          updateData.nicPhotos = { front: downloadUrl };
+          break;
+        case DocumentType.NIC_BACK:
+          updateData.nicPhotos = { back: downloadUrl };
+          break;
+        case DocumentType.BIRTH_CERT_FRONT:
+          updateData.birthCertificatePhotos = { front: downloadUrl };
+          break;
+        case DocumentType.BIRTH_CERT_BACK:
+          updateData.birthCertificatePhotos = { back: downloadUrl };
+          break;
+        case DocumentType.USER_PHOTO:
+          updateData.userPhoto = downloadUrl;
+          break;
+      }
+
+      await this.applicationService.updateDocumentUrls(applicationId, updateData);
+
+      return {
+        key: uploadedKey,
+        url: downloadUrl,
+      };
+    } catch (error) {
+      this.logger.error(`Error uploading document: ${error.message}`);
+      throw error;
+    }
+  }
+
+  @Get('documents/:applicationId')
+  async getDocumentUrls(@Param('applicationId') applicationId: string) {
+    try {
+      const application = await this.applicationService.findOne(applicationId);
+      return {
+        nicPhotos: application.nicPhotos,
+        birthCertificatePhotos: application.birthCertificatePhotos,
+        userPhoto: application.userPhoto,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching document URLs: ${error.message}`);
+      throw error;
+    }
   }
 }
