@@ -8,13 +8,22 @@ import { Role } from 'src/enums/user.enum';
 })
 export class User extends Document {
   @Prop({ required: true, type: String })
-  name: string;
+  firstName: string;
+
+  @Prop({ required: true, type: String })
+  lastName: string;
 
   @Prop({ required: true, type: String })
   email: string;
 
   @Prop({ required: true, type: String })
   password: string;
+
+  @Prop({ required: true, type: String, enum: ['male', 'female'] })
+  gender: string;
+
+  @Prop({ required: true, type: String })
+  birthdate: string;
 
   @Prop({ default: Role.APPLICANT, enum: Role, type: String })
   role: Role;

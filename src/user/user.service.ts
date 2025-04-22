@@ -1,26 +1,68 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/auth/entities/user.entity';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(@InjectModel(User.name) private UserModel: Model<User>) {}
+
+  async getAllUsers() {
+    try {
+      const users = await this.UserModel.find();
+      return users;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      throw new BadRequestException(`Error: ${errorMessage}`);
+    }
   }
 
-  findAll() {
-    return `This action returns all user`;
+  // Change user status
+  async changeUserStatus(id: string, status: 'active' | 'inactive') {
+    try {
+      const user = await this.UserModel.findById(id);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      user.status = status;
+      const savedUser = await user.save();
+      return savedUser.toJSON();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      throw new BadRequestException(`Error: ${errorMessage}`);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  // Delete user
+  async deleteUser(id: string) {
+    try {
+      const user = await this.UserModel.findById(id);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      await this.UserModel.findByIdAndDelete(id);
+
+      return { message: 'User deleted successfully' };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      throw new BadRequestException(`Error: ${errorMessage}`);
+    }
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+  // Find user by ID
+  async findUserById(id: string) {
+    try {
+      const user = await this.UserModel.findById(id);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+      return user.toJSON();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      throw new BadRequestException(`Error: ${errorMessage}`);
+    }
   }
 }
