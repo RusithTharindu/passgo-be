@@ -45,16 +45,21 @@ export class AppointmentsService {
 
   private formatAppointmentResponse(appointment: Appointment) {
     const response = appointment.toObject();
-    return {
+    const formattedResponse = {
       ...response,
       id: appointment._id,
       appointmentId: this.generateAppointmentId(appointment),
-      createdBy: {
-        id: appointment.createdBy._id,
-        name: appointment.createdBy.firstName + ' ' + appointment.createdBy.lastName,
-        email: appointment.createdBy.email,
-      },
     };
+
+    if (appointment.createdBy) {
+      formattedResponse.createdBy = {
+        id: appointment.createdBy._id,
+        name: `${appointment.createdBy.firstName || ''} ${appointment.createdBy.lastName || ''}`.trim(),
+        email: appointment.createdBy.email,
+      };
+    }
+
+    return formattedResponse;
   }
 
   async create(createAppointmentDto: CreateAppointmentDto, userId: string) {
