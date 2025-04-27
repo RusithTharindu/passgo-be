@@ -50,6 +50,22 @@ export class ApplicationService {
     });
   }
 
+  async findByUser(userId: string) {
+    const applications = await this.applicationModel
+      .find({ submittedBy: new Types.ObjectId(userId) })
+      .populate('submittedBy');
+
+    return applications.map(app => {
+      const result = app.toObject() as ApplicationDocument;
+      const { _id, submittedBy, ...rest } = result;
+      return {
+        _id: _id.toString(),
+        ...rest,
+        submittedBy: (submittedBy as any)._id.toString(),
+      };
+    });
+  }
+
   async findOne(id: string) {
     const application = await this.applicationModel.findById(id).populate('submittedBy');
     if (!application) {
