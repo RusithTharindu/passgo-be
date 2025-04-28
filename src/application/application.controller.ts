@@ -61,6 +61,21 @@ export class ApplicationController {
     return this.applicationService.findAll();
   }
 
+  @Get('my-applications')
+  @Roles(Role.APPLICANT)
+  async findMyApplications(@Request() req) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const userId = req.user._id || req.user.id;
+    if (!userId) {
+      throw new UnauthorizedException('User ID not found');
+    }
+
+    return this.applicationService.findByUser(userId);
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN, Role.MANAGER, Role.APPLICANT)
   async findOne(@Param('id') id: string) {
