@@ -21,6 +21,8 @@ export class S3Service {
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
   private readonly logger = new Logger(S3Service.name);
+  private readonly maxRetries = 3;
+  private readonly retryDelay = 1000; // 1 second
 
   constructor(private configService: ConfigService) {
     const region = this.configService.get<string>('s3.region');
@@ -46,18 +48,30 @@ export class S3Service {
     this.bucketName = bucketName;
   }
 
-  async uploadFile(file: Express.Multer.File, key: string): Promise<string> {
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async uploadFile(file: Express.Multer.File, key: string, retryCount = 0): Promise<string> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
+        ContentDisposition: 'inline',
       });
 
       await this.s3Client.send(command);
       return key;
     } catch (error) {
+      if (retryCount < this.maxRetries) {
+        this.logger.warn(
+          `Retrying upload for key ${key}. Attempt ${retryCount + 1} of ${this.maxRetries}`,
+        );
+        await this.delay(this.retryDelay * Math.pow(2, retryCount)); // Exponential backoff
+        return this.uploadFile(file, key, retryCount + 1);
+      }
       this.logger.error(`Error uploading file to S3: ${error.message}`);
       throw error;
     }
@@ -81,7 +95,7 @@ export class S3Service {
     }
   }
 
-  async deleteFile(key: string): Promise<void> {
+  async deleteFile(key: string, retryCount = 0): Promise<void> {
     try {
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -90,8 +104,29 @@ export class S3Service {
 
       await this.s3Client.send(command);
     } catch (error) {
+      if (retryCount < this.maxRetries) {
+        this.logger.warn(
+          `Retrying delete for key ${key}. Attempt ${retryCount + 1} of ${this.maxRetries}`,
+        );
+        await this.delay(this.retryDelay * Math.pow(2, retryCount));
+        return this.deleteFile(key, retryCount + 1);
+      }
       this.logger.error(`Error deleting file from S3: ${error.message}`);
       throw error;
+    }
+  }
+
+  async cleanupFailedUploads(keys: string[]): Promise<void> {
+    try {
+      await Promise.all(
+        keys.map(key =>
+          this.deleteFile(key).catch(err =>
+            this.logger.error(`Failed to delete key ${key}: ${err.message}`),
+          ),
+        ),
+      );
+    } catch (error) {
+      this.logger.error(`Error cleaning up failed uploads: ${error.message}`);
     }
   }
 
