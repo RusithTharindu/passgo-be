@@ -184,6 +184,33 @@ export class Application extends Document {
 
   @Prop()
   counterNumber: string;
+
+  @Prop({
+    type: {
+      front: String,
+      back: String,
+    },
+    required: true,
+  })
+  nicPhotos: {
+    front: string;
+    back: string;
+  };
+
+  @Prop({
+    type: {
+      front: String,
+      back: String,
+    },
+    required: true,
+  })
+  birthCertificatePhotos: {
+    front: string;
+    back: string;
+  };
+
+  @Prop({ required: true })
+  userPhoto: string;
 }
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);

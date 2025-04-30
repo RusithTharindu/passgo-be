@@ -166,6 +166,37 @@ export class ApplicationService {
     return this.applicationModel.findByIdAndDelete(id);
   }
 
+  async updateDocumentUrls(
+    id: string,
+    updateData: Partial<UpdateApplicationDto>,
+  ): Promise<Application> {
+    const application = await this.applicationModel.findById(id);
+    if (!application) {
+      throw new NotFoundException(`Application #${id} not found`);
+    }
+
+    // Merge existing and new photo URLs
+    if (updateData.nicPhotos) {
+      application.nicPhotos = {
+        ...application.nicPhotos,
+        ...updateData.nicPhotos,
+      };
+    }
+
+    if (updateData.birthCertificatePhotos) {
+      application.birthCertificatePhotos = {
+        ...application.birthCertificatePhotos,
+        ...updateData.birthCertificatePhotos,
+      };
+    }
+
+    if (updateData.userPhoto) {
+      application.userPhoto = updateData.userPhoto;
+    }
+
+    return application.save();
+  }
+
   private isValidStatusTransition(
     currentStatus: ApplicationStatus,
     newStatus: ApplicationStatus,
