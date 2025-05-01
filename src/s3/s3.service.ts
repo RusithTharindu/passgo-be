@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { PassportDocumentType } from '../types/renew-passport.types';
 
 export enum DocumentType {
   NIC_FRONT = 'nic-front',
@@ -14,6 +15,9 @@ export enum DocumentType {
   BIRTH_CERT_FRONT = 'birth-certificate-front',
   BIRTH_CERT_BACK = 'birth-certificate-back',
   USER_PHOTO = 'user-photo',
+  CURRENT_PASSPORT = 'current-passport',
+  PASSPORT_PHOTO = 'passport-photo',
+  ADDITIONAL_DOCS = 'additional-documents',
 }
 
 @Injectable()
@@ -130,7 +134,7 @@ export class S3Service {
     }
   }
 
-  generateFileKey(userId: string, documentType: DocumentType): string {
+  generateFileKey(userId: string, documentType: DocumentType | PassportDocumentType): string {
     const timestamp = new Date().getTime();
     return `documents/${userId}/${documentType}-${timestamp}`;
   }

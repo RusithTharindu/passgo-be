@@ -9,6 +9,7 @@ import config from './config/config';
 import { PassportModule } from '@nestjs/passport';
 import { ApplicationModule } from './application/application.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { RenewPassportModule } from './renew-passport/renew-passport.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
     UserModule,
     ApplicationModule,
     AppointmentsModule,
+    RenewPassportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
