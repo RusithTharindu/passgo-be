@@ -58,12 +58,11 @@ export class ApplicationController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
+    if (!req.user.uid) {
       throw new UnauthorizedException('User ID not found');
     }
 
-    return this.applicationService.create(createApplicationDto, userId);
+    return this.applicationService.create(createApplicationDto, req.user.uid);
   }
 
   @Get()
@@ -79,12 +78,11 @@ export class ApplicationController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
+    if (!req.user.uid) {
       throw new UnauthorizedException('User ID not found');
     }
 
-    return this.applicationService.findByUser(userId);
+    return this.applicationService.findByUser(req.user.uid);
   }
 
   @Get(':id')
@@ -128,7 +126,9 @@ export class ApplicationController {
     @Param('type') type: string,
     @Request() req,
   ) {
-    const userId = req.user._id || req.user.id;
+    if (!req.user.uid) {
+      throw new UnauthorizedException('User ID not found');
+    }
     let documentType: DocumentType;
 
     switch (type) {
@@ -163,7 +163,7 @@ export class ApplicationController {
 
       // Generate sanitized key
       const sanitizedName = this.uploadService.sanitizeFileName(file.originalname);
-      const fileKey = this.s3Service.generateFileKey(userId, documentType);
+      const fileKey = this.s3Service.generateFileKey(req.user.uid, documentType);
 
       // Upload to S3
       const uploadedKey = await this.s3Service.uploadFile(processedFile, fileKey);

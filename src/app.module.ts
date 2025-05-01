@@ -21,9 +21,11 @@ import { RenewPassportModule } from './renew-passport/renew-passport.module';
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (config: ConfigService) => ({
-        uri: await config.get('database.connectionString'), //TODO: Check here if error related to auth happens
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get<string>('database.connectionString');
+        console.log('Connecting to MongoDB:', uri);
+        return { uri };
+      },
       inject: [ConfigService],
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),

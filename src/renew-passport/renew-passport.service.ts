@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Error as MongooseError } from 'mongoose';
+import { Model, Error as MongooseError, Types } from 'mongoose';
 import { RenewPassport } from './schemas/renew-passport.schema';
 import { CreateRenewPassportDto } from './dto/create-renew-passport.dto';
 import { UpdateRenewPassportDto } from './dto/update-renew-passport.dto';
@@ -28,60 +28,79 @@ export class RenewPassportService {
     createRenewPassportDto: CreateRenewPassportDto,
   ): Promise<RenewPassport> {
     try {
-      this.logger.log('Service creating renewal with:', { userId, dto: createRenewPassportDto });
+      this.logger.debug('Creating renewal request:', {
+        userId,
+        userIdAsObjectId: new Types.ObjectId(userId),
+        dto: createRenewPassportDto,
+      });
 
       const renewPassport = new this.renewPassportModel({
         ...createRenewPassportDto,
-        userId,
+        userId: new Types.ObjectId(userId),
         status: RenewPassportStatus.PENDING,
       });
 
-      this.logger.debug('Model instance created:', JSON.stringify(renewPassport.toJSON()));
+      this.logger.debug('Model instance before save:', renewPassport);
 
       const saved = await renewPassport.save();
-      this.logger.log('Saved successfully:', JSON.stringify(saved.toJSON()));
+      this.logger.debug('Saved document:', saved);
 
       return saved;
     } catch (error) {
-      this.logger.error('Detailed error in service:', {
+      this.logger.error('Error creating renewal request:', {
         error: error.message,
         stack: error.stack,
-        name: error.name,
-        code: error.code,
-        kind: error.kind,
-        details: error.details || error,
+        userId,
+        dto: createRenewPassportDto,
       });
-
-      if (error instanceof MongooseError.ValidationError) {
-        throw new BadRequestException({
-          message: 'Validation failed',
-          errors: Object.keys(error.errors).reduce((acc, key) => {
-            acc[key] = error.errors[key].message;
-            return acc;
-          }, {}),
-        });
-      }
-
-      if (error.name === 'MongoServerError' && error.code === 11000) {
-        throw new BadRequestException('Duplicate entry found');
-      }
-
-      throw new InternalServerErrorException(
-        'Failed to create passport renewal request: ' + error.message,
-      );
+      throw error;
     }
   }
 
-  async findAll(filter: { status?: RenewPassportStatus } = {}): Promise<RenewPassport[]> {
-    return this.renewPassportModel.find(filter).sort({ createdAt: -1 }).exec();
+  // async findAll(filter: { status?: RenewPassportStatus } = {}): Promise<RenewPassport[]> {
+  //   this.logger.debug('Finding all renewal requests with filter:', filter);
+
+  //   const query = this.renewPassportModel
+  //     .find(filter)
+  //     .populate('userId', 'email firstName lastName')
+  //     .sort({ createdAt: -1 });
+
+  //   this.logger.debug('Query details:', {
+  //     filter: query.getFilter(),
+  //     collection: this.renewPassportModel.collection.name,
+  //     database: this.renewPassportModel.collection.conn.name
+  //   });
+
+  //   const results = await query.exec();
+  //   this.logger.debug(`Found ${results.length} renewal requests:`, results);
+
+  //   return results;
+  // }
+
+  async findAll(): Promise<RenewPassport[]> {
+    return this.renewPassportModel.find().exec();
   }
 
   async findAllByUser(userId: string): Promise<RenewPassport[]> {
-    return this.renewPassportModel.find({ userId }).sort({ createdAt: -1 }).exec();
+    this.logger.debug('Finding requests for user:', userId);
+
+    // First, let's see what's in the database
+    const allDocs = await this.renewPassportModel.find().lean().exec();
+    this.logger.debug('All documents in collection:', allDocs);
+
+    // Now try our specific query
+    const query = { userId: new Types.ObjectId(userId) };
+    this.logger.debug('Query filter:', query);
+
+    const results = await this.renewPassportModel.find(query).sort({ createdAt: -1 }).lean().exec();
+
+    this.logger.debug('Found results:', results);
+
+    return results;
   }
 
   async findOne(id: string): Promise<RenewPassport> {
-    const renewPassport = await this.renewPassportModel.findById(id).exec();
+    const renewPassport = await this.renewPassportModel.findById(id).populate('userId').exec();
     if (!renewPassport) {
       throw new NotFoundException('Passport renewal request not found');
     }
@@ -106,13 +125,14 @@ export class RenewPassportService {
   ): Promise<RenewPassport> {
     const renewPassport = await this.findOne(id);
 
+    const ownerId = (renewPassport.userId as any)._id?.toString();
     this.logger.debug('Document ownership check:', {
       requestUserId: userId,
-      documentOwnerId: renewPassport.userId,
+      documentOwnerId: ownerId,
       documentId: id,
     });
 
-    if (renewPassport.userId !== userId) {
+    if (ownerId !== userId) {
       throw new BadRequestException('You can only upload documents to your own requests');
     }
 
@@ -138,8 +158,9 @@ export class RenewPassportService {
     documentType: PassportDocumentType,
   ): Promise<string> {
     const renewPassport = await this.findOne(id);
+    const ownerId = (renewPassport.userId as any)._id?.toString();
 
-    if (renewPassport.userId !== userId) {
+    if (ownerId !== userId) {
       throw new BadRequestException('You can only access documents from your own requests');
     }
 
@@ -157,8 +178,9 @@ export class RenewPassportService {
     documentType: PassportDocumentType,
   ): Promise<RenewPassport> {
     const renewPassport = await this.findOne(id);
+    const ownerId = (renewPassport.userId as any)._id?.toString();
 
-    if (renewPassport.userId !== userId) {
+    if (ownerId !== userId) {
       throw new BadRequestException('You can only delete documents from your own requests');
     }
 

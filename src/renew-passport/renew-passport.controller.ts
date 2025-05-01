@@ -23,13 +23,19 @@ import { RenewPassportService } from './renew-passport.service';
 import { CreateRenewPassportDto } from './dto/create-renew-passport.dto';
 import { UpdateRenewPassportDto } from './dto/update-renew-passport.dto';
 import { PassportDocumentType, RenewPassportStatus } from '../types/renew-passport.types';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { RenewPassport } from './schemas/renew-passport.schema';
 
 @Controller('renew-passport')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RenewPassportController {
   private readonly logger = new Logger(RenewPassportController.name);
 
-  constructor(private readonly renewPassportService: RenewPassportService) {}
+  constructor(
+    private readonly renewPassportService: RenewPassportService,
+    @InjectModel(RenewPassport.name) private renewPassportModel: Model<RenewPassport>,
+  ) {}
 
   @Post()
   async create(@Request() req, @Body() createRenewPassportDto: CreateRenewPassportDto) {
@@ -72,8 +78,8 @@ export class RenewPassportController {
 
   @Get()
   @Roles('admin')
-  findAll(@Query('status') status?: RenewPassportStatus) {
-    return this.renewPassportService.findAll({ status });
+  findAll() {
+    return this.renewPassportService.findAll();
   }
 
   @Get('my-requests')
@@ -124,5 +130,14 @@ export class RenewPassportController {
     @Query('type') documentType: PassportDocumentType,
   ) {
     return this.renewPassportService.deleteDocument(id, userId, documentType);
+  }
+
+  @Get('debug/raw')
+  @Roles('admin')
+  async findAllRaw() {
+    this.logger.debug('Getting raw database contents');
+    const results = await this.renewPassportModel.find().lean().exec();
+    this.logger.debug('Raw results:', results);
+    return results;
   }
 }

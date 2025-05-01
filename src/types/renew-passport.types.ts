@@ -4,6 +4,7 @@ export enum RenewPassportStatus {
   PENDING = 'PENDING',
   VERIFIED = 'VERIFIED',
   REJECTED = 'REJECTED',
+  READY_TO_COLLECT = 'READY_TO_COLLECT',
 }
 
 export enum PassportDocumentType {
