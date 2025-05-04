@@ -29,10 +29,10 @@ export class AppointmentsController {
   @Post()
   @Roles(Role.APPLICANT)
   async create(@Request() req, @Body() createAppointmentDto: CreateAppointmentDto) {
-    if (!req.user?._id) {
+    if (!req.user?.uid) {
       throw new BadRequestException('User not found');
     }
-    return this.appointmentsService.create(createAppointmentDto, req.user._id);
+    return this.appointmentsService.create(createAppointmentDto, req.user.uid);
   }
 
   @Get()
@@ -60,10 +60,10 @@ export class AppointmentsController {
   @Get('my-appointments')
   @Roles(Role.APPLICANT)
   async findMyAppointments(@Request() req, @Query('status') status?: AppointmentStatus) {
-    if (!req.user?._id) {
+    if (!req.user?.uid) {
       throw new BadRequestException('User not found');
     }
-    const query: any = { createdBy: req.user._id };
+    const query: any = { createdBy: req.user.uid };
     if (status) query.status = status;
 
     return this.appointmentsService.findAll(query);
@@ -83,7 +83,7 @@ export class AppointmentsController {
     const appointment = await this.appointmentsService.findOne(id);
 
     // Allow applicants to only view their own appointments
-    if (req.user.role === Role.APPLICANT && appointment.createdBy.id.toString() !== req.user._id) {
+    if (req.user.role === Role.APPLICANT && appointment.createdBy.id.toString() !== req.user.uid) {
       throw new BadRequestException('Not authorized to view this appointment');
     }
 
@@ -101,7 +101,7 @@ export class AppointmentsController {
 
     // Handle applicant updates
     if (req.user.role === Role.APPLICANT) {
-      if (appointment.createdBy.id.toString() !== req.user._id) {
+      if (appointment.createdBy.id.toString() !== req.user.uid) {
         throw new BadRequestException('Not authorized to update this appointment');
       }
 
@@ -140,7 +140,7 @@ export class AppointmentsController {
 
     // Applicants can only delete their own pending appointments
     if (req.user.role === Role.APPLICANT) {
-      if (appointment.createdBy.id.toString() !== req.user._id) {
+      if (appointment.createdBy.id.toString() !== req.user.uid) {
         throw new BadRequestException('Not authorized to delete this appointment');
       }
       if (appointment.status !== AppointmentStatus.PENDING) {
