@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { User } from 'src/auth/entities/user.entity';
 import * as mongoose from 'mongoose';
+import { PassportDocumentType } from 'src/types/renew-passport.types';
 
 export enum ApplicationStatus {
   SUBMITTED = 'submitted', // Application submitted
@@ -179,7 +180,7 @@ export class Application extends Document {
   @Prop({ type: Boolean, default: false })
   fingerprintVerified?: boolean;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   studioPhotoUrl: string;
 
   @Prop()
@@ -190,7 +191,7 @@ export class Application extends Document {
       front: String,
       back: String,
     },
-    required: true,
+    required: false,
   })
   nicPhotos: {
     front: string;
@@ -202,15 +203,20 @@ export class Application extends Document {
       front: String,
       back: String,
     },
-    required: true,
+    required: false,
   })
   birthCertificatePhotos: {
     front: string;
     back: string;
   };
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   userPhoto: string;
+
+  @Prop({ type: Object, default: {} })
+  documents: {
+    [key in PassportDocumentType]?: string;
+  };
 }
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);
