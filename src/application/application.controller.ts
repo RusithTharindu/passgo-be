@@ -216,4 +216,40 @@ export class ApplicationController {
       throw error;
     }
   }
+
+  @Get('stats/total-applications')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getTotalApplicationsCount() {
+    return this.applicationService.getTotalApplicationsCount();
+  }
+
+  @Get('stats/appointment-requests')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getAppointmentRequestsCount() {
+    return this.applicationService.getAppointmentRequestsCount();
+  }
+
+  @Get('stats/renewal-requests')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getRenewalRequestsCount() {
+    return this.applicationService.getRenewalRequestsCount();
+  }
+
+  @Get('stats/daily-distribution')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getDailyApplicationDistribution() {
+    return this.applicationService.getDailyApplicationDistribution();
+  }
+
+  @Get('stats/passport-types')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getPassportTypesDistribution() {
+    return this.applicationService.getPassportTypesDistribution();
+  }
+
+  @Get('stats/district-distribution')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getDistrictApplicationsDistribution() {
+    return this.applicationService.getDistrictApplicationsDistribution();
+  }
 }
