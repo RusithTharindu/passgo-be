@@ -25,6 +25,10 @@ import { Roles } from '../auth/decorators/roles.decorators';
 import { ApplicationStatus } from './entities/application.entity';
 import { S3Service, DocumentType } from '../s3/s3.service';
 import { UploadService } from '../upload/upload.service';
+import { PassportDocumentType } from '../types/renew-passport.types';
+import { InjectModel } from '@nestjs/mongoose';
+import { Application } from './entities/application.entity';
+import { Model } from 'mongoose';
 
 @Controller('application')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
@@ -36,6 +40,7 @@ export class ApplicationController {
     private readonly applicationService: ApplicationService,
     private readonly s3Service: S3Service,
     private readonly uploadService: UploadService,
+    @InjectModel(Application.name) private readonly applicationModel: Model<Application>,
   ) {}
 
   @Get('test-auth')
@@ -58,12 +63,11 @@ export class ApplicationController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
+    if (!req.user.uid) {
       throw new UnauthorizedException('User ID not found');
     }
 
-    return this.applicationService.create(createApplicationDto, userId);
+    return this.applicationService.create(createApplicationDto, req.user.uid);
   }
 
   @Get()
@@ -79,12 +83,11 @@ export class ApplicationController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
+    if (!req.user.uid) {
       throw new UnauthorizedException('User ID not found');
     }
 
-    return this.applicationService.findByUser(userId);
+    return this.applicationService.findByUser(req.user.uid);
   }
 
   @Get(':id')
@@ -94,7 +97,7 @@ export class ApplicationController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.APPLICANT)
   async update(@Param('id') id: string, @Body() updateApplicationDto: UpdateApplicationDto) {
     return this.applicationService.update(id, updateApplicationDto);
   }
@@ -128,27 +131,13 @@ export class ApplicationController {
     @Param('type') type: string,
     @Request() req,
   ) {
-    const userId = req.user._id || req.user.id;
-    let documentType: DocumentType;
+    if (!req.user.uid) {
+      throw new UnauthorizedException('User ID not found');
+    }
 
-    switch (type) {
-      case 'nic-front':
-        documentType = DocumentType.NIC_FRONT;
-        break;
-      case 'nic-back':
-        documentType = DocumentType.NIC_BACK;
-        break;
-      case 'birth-cert-front':
-        documentType = DocumentType.BIRTH_CERT_FRONT;
-        break;
-      case 'birth-cert-back':
-        documentType = DocumentType.BIRTH_CERT_BACK;
-        break;
-      case 'user-photo':
-        documentType = DocumentType.USER_PHOTO;
-        break;
-      default:
-        throw new Error('Invalid document type');
+    // Validate document type
+    if (!Object.values(PassportDocumentType).includes(type as PassportDocumentType)) {
+      throw new Error('Invalid document type');
     }
 
     try {
@@ -162,8 +151,7 @@ export class ApplicationController {
       };
 
       // Generate sanitized key
-      const sanitizedName = this.uploadService.sanitizeFileName(file.originalname);
-      const fileKey = this.s3Service.generateFileKey(userId, documentType);
+      const fileKey = this.s3Service.generateFileKey(req.user.uid, type as unknown as DocumentType);
 
       // Upload to S3
       const uploadedKey = await this.s3Service.uploadFile(processedFile, fileKey);
@@ -183,27 +171,19 @@ export class ApplicationController {
         throw new Error('Application ID is required');
       }
 
-      const updateData: Partial<UpdateApplicationDto> = {};
+      // Get existing application
+      const application = await this.applicationService.findOne(applicationId);
 
-      switch (documentType) {
-        case DocumentType.NIC_FRONT:
-          updateData.nicPhotos = { front: downloadUrl };
-          break;
-        case DocumentType.NIC_BACK:
-          updateData.nicPhotos = { back: downloadUrl };
-          break;
-        case DocumentType.BIRTH_CERT_FRONT:
-          updateData.birthCertificatePhotos = { front: downloadUrl };
-          break;
-        case DocumentType.BIRTH_CERT_BACK:
-          updateData.birthCertificatePhotos = { back: downloadUrl };
-          break;
-        case DocumentType.USER_PHOTO:
-          updateData.userPhoto = downloadUrl;
-          break;
-      }
-
-      await this.applicationService.updateDocumentUrls(applicationId, updateData);
+      // Update documents field
+      await this.applicationModel.findByIdAndUpdate(
+        applicationId,
+        {
+          $set: {
+            [`documents.${type}`]: downloadUrl,
+          },
+        },
+        { new: true },
+      );
 
       return {
         key: uploadedKey,
@@ -229,10 +209,47 @@ export class ApplicationController {
         nicPhotos: application.nicPhotos,
         birthCertificatePhotos: application.birthCertificatePhotos,
         userPhoto: application.userPhoto,
+        documents: application.documents || {},
       };
     } catch (error) {
       this.logger.error(`Error fetching document URLs: ${error.message}`);
       throw error;
     }
+  }
+
+  @Get('stats/total-applications')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getTotalApplicationsCount() {
+    return this.applicationService.getTotalApplicationsCount();
+  }
+
+  @Get('stats/appointment-requests')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getAppointmentRequestsCount() {
+    return this.applicationService.getAppointmentRequestsCount();
+  }
+
+  @Get('stats/renewal-requests')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getRenewalRequestsCount() {
+    return this.applicationService.getRenewalRequestsCount();
+  }
+
+  @Get('stats/daily-distribution')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getDailyApplicationDistribution() {
+    return this.applicationService.getDailyApplicationDistribution();
+  }
+
+  @Get('stats/passport-types')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getPassportTypesDistribution() {
+    return this.applicationService.getPassportTypesDistribution();
+  }
+
+  @Get('stats/district-distribution')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  async getDistrictApplicationsDistribution() {
+    return this.applicationService.getDistrictApplicationsDistribution();
   }
 }

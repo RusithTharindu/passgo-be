@@ -9,6 +9,8 @@ import config from './config/config';
 import { PassportModule } from '@nestjs/passport';
 import { ApplicationModule } from './application/application.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { RenewPassportModule } from './renew-passport/renew-passport.module';
+import { DocumentAiModule } from './document-ai/document-ai.module';
 
 @Module({
   imports: [
@@ -20,9 +22,11 @@ import { AppointmentsModule } from './appointments/appointments.module';
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (config: ConfigService) => ({
-        uri: await config.get('database.connectionString'), //TODO: Check here if error related to auth happens
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get<string>('database.connectionString');
+        console.log('Connecting to MongoDB:', uri);
+        return { uri };
+      },
       inject: [ConfigService],
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -30,6 +34,8 @@ import { AppointmentsModule } from './appointments/appointments.module';
     UserModule,
     ApplicationModule,
     AppointmentsModule,
+    RenewPassportModule,
+    DocumentAiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
