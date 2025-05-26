@@ -1,0 +1,30 @@
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+coverage
+.nyc_output
+.DS_Store
+*.log
+.vscode
+.idea
+.husky
+test
+*.spec.ts
+*.test.ts
+jest.config.js
+.eslintrc.json
+.prettierrc
+.prettierignore
+# tsconfig.json - needed for build
+# tsconfig.build.json - needed for build  
+tsconfig.eslint.json
+eslint.config.mjs
+# nest-cli.json - needed for build 
