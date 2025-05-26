@@ -4,13 +4,20 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Application, ApplicationStatus } from './entities/application.entity';
 import { Model, Types } from 'mongoose';
+import { S3Service } from '../s3/s3.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { Logger } from '@nestjs/common';
 
 type ApplicationDocument = Application & { _id: Types.ObjectId };
 type ApplicationWithId = Omit<Application, '_id'> & { _id: string };
 
 @Injectable()
 export class ApplicationService {
-  constructor(@InjectModel(Application.name) private applicationModel: Model<Application>) {}
+  private readonly logger = new Logger(ApplicationService.name);
+  constructor(
+    @InjectModel(Application.name) private readonly applicationModel: Model<Application>,
+    private readonly s3Service: S3Service,
+  ) {}
 
   async create(createApplicationDto: CreateApplicationDto, userId: string) {
     const application = new this.applicationModel({
@@ -158,12 +165,12 @@ export class ApplicationService {
     };
   }
 
-  async remove(id: string) {
-    const application = await this.applicationModel.findById(id);
-    if (!application) {
-      throw new NotFoundException('Application not found');
+  async remove(id: string): Promise<Application> {
+    const deletedApplication = await this.applicationModel.findByIdAndDelete(id).exec();
+    if (!deletedApplication) {
+      throw new NotFoundException(`Application with ID "${id}" not found`);
     }
-    return this.applicationModel.findByIdAndDelete(id);
+    return deletedApplication;
   }
 
   async updateDocumentUrls(
@@ -263,5 +270,118 @@ export class ApplicationService {
     };
 
     return validTransitions[currentStatus]?.includes(newStatus) || false;
+  }
+
+  async getTotalApplicationsCount(): Promise<number> {
+    return this.applicationModel.countDocuments().exec();
+  }
+
+  async getAppointmentRequestsCount(): Promise<number> {
+    return this.applicationModel
+      .countDocuments({ appointmentDate: { $exists: true, $ne: null } })
+      .exec();
+  }
+
+  async getRenewalRequestsCount(): Promise<number> {
+    return this.applicationModel
+      .countDocuments({ presentTravelDocument: { $exists: true, $ne: '' } })
+      .exec();
+  }
+
+  async getDailyApplicationDistribution(): Promise<{ date: string; applications: number }[]> {
+    const result = await this.applicationModel
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            },
+            applications: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            date: '$_id',
+            applications: 1,
+          },
+        },
+        {
+          $sort: { date: 1 },
+        },
+      ])
+      .exec();
+
+    // The aggregation now returns data for all dates present in the database.
+    // No need to fill in missing dates as the user wants all historical data.
+    return result;
+  }
+
+  async getPassportTypesDistribution(): Promise<{ name: string; value: number }[]> {
+    const result = await this.applicationModel
+      .aggregate([
+        {
+          $group: {
+            _id: '$TypeofTravelDocument',
+            value: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            name: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ['$_id', 'all'] }, then: 'All Countries' },
+                  { case: { $eq: ['$_id', 'middleEast'] }, then: 'Middle East' },
+                  {
+                    case: { $eq: ['$_id', 'emergencyCertificate'] },
+                    then: 'Emergency Certificate',
+                  },
+                  { case: { $eq: ['$_id', 'identityCertificate'] }, then: 'Identity Certificate' },
+                ],
+                default: '$_id',
+              },
+            },
+            value: 1,
+          },
+        },
+        {
+          $sort: { value: -1 },
+        },
+      ])
+      .exec();
+
+    return result;
+  }
+
+  async getDistrictApplicationsDistribution(): Promise<{ name: string; value: number }[]> {
+    const result = await this.applicationModel
+      .aggregate([
+        {
+          $group: {
+            _id: '$permenantAddressDistrict',
+            value: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            name: '$_id',
+            value: 1,
+          },
+        },
+        {
+          $sort: { value: -1 },
+        },
+      ])
+      .exec();
+
+    return result;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleExpiredPresignedUrls() {
+    // ... existing code ...
   }
 }

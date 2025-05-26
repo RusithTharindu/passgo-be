@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  passgo-be:
+    build: .
+    container_name: passgo-backend
+    ports:
+      - '8080:8080'
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - passgo-network
+
+  mongodb:
+    image: mongo:6-alpine
+    container_name: passgo-mongodb
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: passgo
+    restart: unless-stopped
+    networks:
+      - passgo-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  passgo-network:
+    driver: bridge

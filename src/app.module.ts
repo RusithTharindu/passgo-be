@@ -10,6 +10,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ApplicationModule } from './application/application.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { RenewPassportModule } from './renew-passport/renew-passport.module';
+import { DocumentAiModule } from './document-ai/document-ai.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { RenewPassportModule } from './renew-passport/renew-passport.module';
     ApplicationModule,
     AppointmentsModule,
     RenewPassportModule,
+    DocumentAiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
