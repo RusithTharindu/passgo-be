@@ -113,7 +113,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database Configuration
-MONGO_URI=mongodb://localhost:27017/bfddgf-dfsd
+MONGO_URI=mongodb://localhost:27017/passgo
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-complex
@@ -232,12 +232,125 @@ pnpm run start:prod
 ```
 
 ### Docker Deployment
-```bash
-# Build Docker image
-docker build -t passgo-backend .
 
-# Run container
-docker run -p 8080:8080 --env-file .env passgo-backend
+#### Prerequisites
+- Docker installed on your system
+- `.env` file configured with all required environment variables
+
+#### Build Docker Image
+```bash
+# Build the Docker image
+docker build -t passgo-be .
+```
+
+#### Run with Environment File
+```bash
+# Run container with .env file
+docker run --rm -p 8080:8080 --env-file .env passgo-be
+```
+
+#### Run with Inline Environment Variables
+```bash
+# Run with individual environment variables
+docker run --rm -p 8080:8080 \
+  -e JWT_SECRET=your_jwt_secret \
+  -e MONGO_URI=mongodb://host.docker.internal:27017/passgo \
+  -e AWS_REGION=us-east-1 \
+  -e AWS_ACCESS_KEY_ID=your_access_key \
+  -e AWS_SECRET_ACCESS_KEY=your_secret_key \
+  -e AWS_S3_BUCKET_NAME=your_bucket_name \
+  passgo-be
+```
+
+#### Docker Compose (Recommended)
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  passgo-be:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:6-alpine
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: passgo
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+```
+
+Then run:
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f passgo-be
+
+# Stop services
+docker-compose down
+```
+
+#### Docker Environment Variables
+Ensure your `.env` file contains:
+
+```env
+# Required for Docker deployment
+JWT_SECRET=your-super-secret-jwt-key
+MONGO_URI=mongodb://mongodb:27017/passgo  # Use service name for docker-compose
+PORT=8080
+
+# AWS Configuration
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_S3_BUCKET_NAME=your_bucket_name
+
+# Google Cloud Document AI
+GOOGLE_CLOUD_PROJECT_ID=your_project_id
+GOOGLE_CLOUD_LOCATION=us
+GOOGLE_CLOUD_PROCESSOR_ID=your_processor_id
+GOOGLE_APPLICATION_CREDENTIALS=./google-credentials.json
+```
+
+#### Docker Health Check
+The container includes a health check endpoint. Check container health:
+
+```bash
+# Check container status
+docker ps
+
+# View health check logs
+docker inspect --format='{{.State.Health.Status}}' <container_id>
+```
+
+#### Production Deployment
+For production deployment:
+
+```bash
+# Build production image
+docker build -t passgo-be:latest .
+
+# Run with restart policy
+docker run -d \
+  --name passgo-backend \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  --env-file .env \
+  passgo-be:latest
 ```
 
 ## 📚 API Documentation
