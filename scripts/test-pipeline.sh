@@ -42,8 +42,8 @@ fi
 echo -e "${GREEN}✓ Dependencies installed successfully${NC}"
 
 
-# Step 4: Build the project
-echo -e "\n${YELLOW}Step 4: Building the project...${NC}"
+# Step 2: Build the project
+echo -e "\n${YELLOW}Step 2: Building the project...${NC}"
 pnpm run build
 if [ $? -ne 0 ]; then
     echo -e "${RED}Error: Build failed${NC}"
@@ -51,8 +51,8 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "${GREEN}✓ Build successful${NC}"
 
-# Step 5: Build Docker image
-echo -e "\n${YELLOW}Step 5: Building Docker image...${NC}"
+# Step 3: Build Docker image
+echo -e "\n${YELLOW}Step 3: Building Docker image...${NC}"
 docker build -t passgo-be:test .
 if [ $? -ne 0 ]; then
     echo -e "${RED}Error: Docker build failed${NC}"
@@ -60,8 +60,8 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "${GREEN}✓ Docker image built successfully${NC}"
 
-# Step 6: Test Docker container
-echo -e "\n${YELLOW}Step 6: Testing Docker container...${NC}"
+# Step 4: Test Docker container
+echo -e "\n${YELLOW}Step 4: Testing Docker container...${NC}"
 docker run -d --name passgo-be-test -p 8080:8080 --env-file .env passgo-be:test
 if [ $? -ne 0 ]; then
     echo -e "${RED}Error: Failed to start Docker container${NC}"
